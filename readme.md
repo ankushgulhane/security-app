@@ -1,80 +1,77 @@
-This is app present how to secure api using tls. 
+Step 1: Learn the concepts
 
- some commands use to generate certificate
+Keystore = server’s private key + cert
 
-TLS (Transport Layer Security) – Basics
-1️⃣ What is TLS?
+Truststore = list of certs your app trusts
 
-TLS = successor of SSL (more secure).
+In mTLS:
 
-It provides:
+Server has a keystore (its identity)
 
-Encryption → data is unreadable to attackers.
+Server has a truststore (which clients it trusts)
 
-Integrity → data can’t be tampered with.
+Client has a keystore (its identity)
 
-Authentication → server (and sometimes client) identity is verified.
+Client has a truststore (which servers it trusts)
 
-👉 Without TLS, your passwords, tokens, API keys travel in plain text (bad for security).
+Step 2: Generate certificates
 
-2️⃣ How TLS Works (High Level)
+One for server
 
-TLS uses Public Key Cryptography:
+One for client
 
-Server has a private key (kept secret).
+Share their public certificates into each other’s truststore
 
-Server certificate (signed by CA) contains the public key.
+Step 3: Configure Spring Boot server
 
-When a client (browser, API consumer) connects:
+Require client certificates (server.ssl.client-auth=need)
 
-Handshake starts → client asks server for certificate.
+Point to server keystore & truststore
 
-Client verifies if certificate is trusted (via Certificate Authority, CA).
+Step 4: Configure a test client
 
-A shared session key is generated → used for fast symmetric encryption.
+Could be:
 
-From then on → all communication is encrypted.
+Another Spring Boot app
 
-3️⃣ TLS Key Concepts You Need to Know
+Or curl with client cert (curl --cert client.crt --key client.key https://...)
 
-Certificate → digital identity of server, signed by CA.
+Step 5: Run & test
 
-CA (Certificate Authority) → trusted third party (e.g., Let’s Encrypt, DigiCert).
+Without cert → access denied 🚫
 
-Keystore → file that stores private keys + certificates (server side).
+With valid cert → success ✅
 
-Truststore → file that stores trusted CA/public certs (client side).
 
-Self-signed certificate → you generate it yourself (for learning/testing).
 
-Chain of trust → root CA → intermediate CA → server certificate.
+ commands
 
-4️⃣ TLS in Spring Boot Context
+Step 1: Generate Server Keystore
 
-Spring Boot uses embedded Tomcat (or Jetty/Undertow).
+>keytool -genkeypair -alias server -keyalg RSA -keysize 2048 -storetype PKCS12 -keystore server-keystore.p12 -validity 3650
 
-By default, apps run on HTTP (port 8080).
 
-To enable HTTPS (TLS):
 
-You need a keystore (server certificate).
+Export Server Certificate
 
-Configure it in application.yml or application.properties.
+> keytool -export -alias server -keystore server-keystore.p12 -rfc -file server-cert.pem
 
-Server will then run on HTTPS (port 8443 by convention).
+Step 3: Generate Client Keystore
 
-5️⃣ Practical Flow (Learning Roadmap for TLS)
+> keytool -genkeypair -alias client -keyalg RSA -keysize 2048 -storetype PKCS12 -keystore client-keystore.p12 -validity 3650
 
-Here’s how we’ll learn TLS in hands-on steps:
+Step 4: Export Client Certificate
+> keytool -export -alias client -keystore client-keystore.p12 -rfc -file client-cert.pem
 
-Generate a self-signed certificate using keytool.
 
-Configure Spring Boot to use that certificate → run app on HTTPS (port 8443).
+Step 5: Create Server Truststore (trust client)
 
-Test with browser and curl (https://localhost:8443).
+> keytool -import -alias client -file client-cert.pem -keystore server-truststore.p12 -storetype PKCS12
 
-(Optional) Add real CA-signed cert (Let’s Encrypt) → for production.
+Step 6: Create Client Truststore (trust server)
 
-CMD>
-    keytool -genkeypair -alias springboot -keyalg RSA -keysize 2048 -storetype PKCS12 -keystore keystore.p12 -validity 3650
-    private key > changeit
+>keytool -import -alias server -file server-cert.pem -keystore client-truststore.p12 -storetype PKCS12
+
+
+TEST APP using curl
+> curl -vk https://localhost:8443/mtls/hi --cert client-keystore.p12:client --cert-type P12

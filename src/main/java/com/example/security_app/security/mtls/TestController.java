@@ -1,4 +1,4 @@
-package com.example.security_app.security.tls;
+package com.example.security_app.security.mtls;
 
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
@@ -10,9 +10,9 @@ public class TestController {
 
 
 
-    @GetMapping("/tls/hi")
+    @GetMapping("/mtls/hi")
     public ResponseEntity<String> callApi(){
 
-        return new ResponseEntity(" Hi this is TLS secure app", HttpStatusCode.valueOf(200));
+        return new ResponseEntity(" Hi this is mTLS secure app", HttpStatusCode.valueOf(200));
     }
 }
